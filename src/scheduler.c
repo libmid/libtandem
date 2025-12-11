@@ -33,7 +33,7 @@ char *td_status_to_str(td_coro_status status) {
   }
 }
 
-void td_sch_loop(td_rt *rt) {
+void td_sch_run(td_rt *rt) {
   bool all_waiting;
   while (rt->running.len > 1) {
     do {
@@ -89,6 +89,12 @@ void td_sch_init(td_rt *rt) {
 
   sch->ring = ring;
   rt->sch = sch;
+}
+
+void td_sch_free(td_rt *rt) {
+  io_uring_queue_exit(&rt->sch->ring);
+  free(rt->sch);
+  rt->sch = NULL;
 }
 
 void *sch_id(td_rt *rt) { return (void *)rt->current->id; }
