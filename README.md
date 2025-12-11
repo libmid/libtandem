@@ -1,12 +1,15 @@
 ## Build & Usage
 
-Build shared and static library using `make`. Build artifacts can be found in `/build`.
+### Requirements
+- liburing
+
+Build shared and static library using `make`. Build artifacts can be found in `build/`.
 
 ## Basic Coroutine Example
 
 ``` c
 #include <stdio.h>
-#include "tandem/coro.h"
+#include <tandem/coro.h>
 
 #define STACK_SIZE 64 * 1024
 
@@ -27,8 +30,8 @@ void bar(td_rt *rt) {
 int main() {
   td_rt *rt = td_init();
 
-  td_coro* coro1 = td_spawn(rt, &foo, STACK_SIZE);
-  td_coro* coro2 = td_spawn(rt, &bar, STACK_SIZE);
+  td_coro* coro1 = td_spawn(rt, &foo, 0, NULL, STACK_SIZE);
+  td_coro* coro2 = td_spawn(rt, &bar, 0, NULL, STACK_SIZE);
 
   while (coro1->status == TD_CORO_RUNNING || coro2->status == TD_CORO_RUNNING) {
     printf("MAIN\n");
@@ -37,5 +40,7 @@ int main() {
   }
 
   td_free(rt);
+
+  return 0;
 }
 ```

@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#include "../include/tandem/scheduler.h"
 #include "../include/tandem/coro.h"
+#include "../include/tandem/scheduler.h"
 
 #define MSEC 2000
 #define STACK_SIZE 32 * 1024
@@ -19,11 +19,11 @@ void input(td_rt *rt) {
   printf("[Task READ] Set flag = 1\n");
 }
 
-void sleep_loop(td_rt *rt) {
+void counter_loop(td_rt *rt) {
+  int c = 1;
   while (!flag) {
-    printf("[Task SLEEP] Sleeping %dms\n", MSEC);
-    td_sleep(rt, MSEC);
-    printf("[Task SLEEP] Woke up. flag = %d\n", flag);
+    printf("[COUNTER] counter = %d\n", c++);
+    td_sleep(rt, 1500);
   }
 }
 
@@ -32,7 +32,7 @@ int main() {
   td_sch_init(rt);
 
   td_spawn(rt, &input, 0, NULL, STACK_SIZE);
-  td_spawn(rt, &sleep_loop, 0, NULL, STACK_SIZE);
+  td_spawn(rt, &counter_loop, 0, NULL, STACK_SIZE);
 
   td_sch_loop(rt);
 

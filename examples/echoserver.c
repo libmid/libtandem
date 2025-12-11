@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "../include/tandem/coro.h"
 #include "../include/tandem/scheduler.h"
@@ -9,6 +10,7 @@
 
 void handle_connection(td_rt *rt) {
   int clientfd = *(int *)rt->current->argv;
+  free(rt->current->argv);
   char buf[1024];
   while (true) {
     int size = td_read(rt, clientfd, &buf, sizeof(buf));
@@ -73,7 +75,11 @@ void server(td_rt *rt) {
     printf("[SERVER] Accepted new connection from client %s:%d\n", client_ip,
            ntohs(client->sin_port));
 
-    td_spawn(rt, &handle_connection, 1, &clientfd, STACK_SIZE);
+    int *cfd = (int *)malloc(sizeof(int));
+    *cfd = clientfd;
+    td_spawn(rt, &handle_connection, 1, cfd, STACK_SIZE);
+
+    free(client);
   }
 
   td_close(rt, sockfd);
