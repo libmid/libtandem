@@ -2,6 +2,7 @@
 #include <liburing.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include <time.h>
 
 #include "../include/common.h"
@@ -141,6 +142,92 @@ ssize_t td_write(td_rt *rt, int fd, void *buf, size_t count) {
   assert(sqe != NULL);
 
   io_uring_prep_write(sqe, fd, buf, count, 0);
+  io_uring_sqe_set_data(sqe, sch_id(rt));
+  io_uring_submit(&rt->sch->ring);
+
+  sch_wait_on_io(rt, &cqe);
+
+  return cqe->res;
+}
+
+int td_socket(td_rt *rt, int domain, int type, int protocol) {
+  assert(&rt->sch != NULL);
+
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&rt->sch->ring);
+  struct io_uring_cqe *cqe;
+
+  assert(sqe != NULL);
+
+  io_uring_prep_socket(sqe, domain, type, protocol, 0);
+  io_uring_sqe_set_data(sqe, sch_id(rt));
+  io_uring_submit(&rt->sch->ring);
+
+  sch_wait_on_io(rt, &cqe);
+
+  return cqe->res;
+}
+
+int td_bind(td_rt *rt, int sockfd, struct sockaddr *addr, socklen_t addrlen) {
+  assert(&rt->sch != NULL);
+
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&rt->sch->ring);
+  struct io_uring_cqe *cqe;
+
+  assert(sqe != NULL);
+
+  io_uring_prep_bind(sqe, sockfd, addr, addrlen);
+  io_uring_sqe_set_data(sqe, sch_id(rt));
+  io_uring_submit(&rt->sch->ring);
+
+  sch_wait_on_io(rt, &cqe);
+
+  return cqe->res;
+}
+
+int td_listen(td_rt *rt, int sockfd, int backlog) {
+  assert(&rt->sch != NULL);
+
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&rt->sch->ring);
+  struct io_uring_cqe *cqe;
+
+  assert(sqe != NULL);
+
+  io_uring_prep_listen(sqe, sockfd, backlog);
+  io_uring_sqe_set_data(sqe, sch_id(rt));
+  io_uring_submit(&rt->sch->ring);
+
+  sch_wait_on_io(rt, &cqe);
+
+  return cqe->res;
+}
+
+int td_accept(td_rt *rt, int sockfd, struct sockaddr *addr,
+              socklen_t *addrlen) {
+  assert(&rt->sch != NULL);
+
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&rt->sch->ring);
+  struct io_uring_cqe *cqe;
+
+  assert(sqe != NULL);
+
+  io_uring_prep_accept(sqe, sockfd, addr, addrlen, 0);
+  io_uring_sqe_set_data(sqe, sch_id(rt));
+  io_uring_submit(&rt->sch->ring);
+
+  sch_wait_on_io(rt, &cqe);
+
+  return cqe->res;
+}
+
+int td_close(td_rt *rt, int fd) {
+  assert(&rt->sch != NULL);
+
+  struct io_uring_sqe *sqe = io_uring_get_sqe(&rt->sch->ring);
+  struct io_uring_cqe *cqe;
+
+  assert(sqe != NULL);
+
+  io_uring_prep_close(sqe, fd);
   io_uring_sqe_set_data(sqe, sch_id(rt));
   io_uring_submit(&rt->sch->ring);
 
