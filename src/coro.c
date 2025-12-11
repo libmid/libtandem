@@ -1,7 +1,9 @@
+#include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
-#include "coro_vec.h"
-#include "common.h"
+#include "../include/common.h"
+#include "../include/coro_vec.h"
 
 void __td_switch(td_ctx *from, td_ctx *to);
 void __td_entry();
@@ -38,7 +40,12 @@ void td_free(td_rt *rt) {
 }
 
 void td_suspend(td_rt *rt) {
-  __td_switch(&rt->current->ctx, &rt->running.items->ctx);
+  if (rt->current == NULL) {
+    __td_switch(&rt->finished.items[rt->finished.len - 1].ctx,
+                &rt->running.items->ctx);
+  } else {
+    __td_switch(&rt->current->ctx, &rt->running.items->ctx);
+  }
 }
 
 void td_resume(td_rt *rt, td_coro *coro) {
@@ -47,7 +54,8 @@ void td_resume(td_rt *rt, td_coro *coro) {
 
   td_coro *current = rt->current;
 
-  // Set the current coro to the child coro
+  // Set the current coro to the child coro and set its status to running
+  coro->status = TD_CORO_RUNNING;
   rt->current = coro;
   __td_switch(&current->ctx, &coro->ctx);
   // Reset the current coro
@@ -57,34 +65,33 @@ void td_resume(td_rt *rt, td_coro *coro) {
 void entry(td_rt *rt) {
   rt->current->fn(rt);
 
-  td_coro coro = unordered_remove_vec(&rt->running, index_of_vec(&rt->running, rt->current));
+  td_coro coro = unordered_remove_vec(&rt->running,
+                                      index_of_vec(&rt->running, rt->current));
 
-  rt->current->status = TD_CORO_FINISHED;
+  rt->current = NULL; // The current task has ended
+
+  coro.status = TD_CORO_FINISHED;
   push_vec(&rt->finished, coro);
 
   td_suspend(rt);
 }
 
-size_t td_argc(td_rt *rt) {
-  return rt->current->argc;
-}
+size_t td_argc(td_rt *rt) { return rt->current->argc; }
 
-void *td_argv(td_rt *rt) {
-  return rt->current->argv;
-}
+void *td_argv(td_rt *rt) { return rt->current->argv; }
 
-void td_return(td_rt *rt, void *result) {
-  rt->current->result = result;
-}
+void td_return(td_rt *rt, void *result) { rt->current->result = result; }
 
-void* td_consume(td_rt *rt, td_coro *coro) {
+void *td_consume(td_rt *rt, td_coro *coro) {
   coro->status = TD_CORO_DEAD;
-  td_coro c = unordered_remove_vec(&rt->finished, index_of_vec(&rt->finished, coro));
+  td_coro c =
+      unordered_remove_vec(&rt->finished, index_of_vec(&rt->finished, coro));
   push_vec(&rt->dead, c);
   return coro->result;
 }
 
-td_coro* td_spawn(td_rt *rt, void(*fn)(td_rt*), size_t argc, void *argv, size_t stack_size) {
+td_coro *td_spawn(td_rt *rt, void (*fn)(td_rt *), size_t argc, void *argv,
+                  size_t stack_size) {
   td_coro coro = {0};
   coro.id = ++rt->id_counter;
   coro.argc = argc;
@@ -103,10 +110,10 @@ td_coro* td_spawn(td_rt *rt, void(*fn)(td_rt*), size_t argc, void *argv, size_t 
 
   coro.status = TD_CORO_RUNNING;
   coro.fn = fn;
-  coro.ctx.rip = (void*)__td_entry;
-  coro.ctx.rsp = (void*)(coro.stack + stack_size);
-  coro.ctx.r12 = (void*)rt;
-  coro.ctx.r13 = (void*)entry;
+  coro.ctx.rip = (void *)__td_entry;
+  coro.ctx.rsp = (void *)(coro.stack + stack_size);
+  coro.ctx.r12 = (void *)rt;
+  coro.ctx.r13 = (void *)entry;
 
   push_vec(&rt->running, coro);
 

@@ -1,11 +1,11 @@
+#include <assert.h>
+#include <liburing.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <liburing.h>
-#include <assert.h>
 
-#include "common.h"
-#include "coro_vec.h"
-#include "tandem/coro.h"
+#include "../include/common.h"
+#include "../include/tandem/coro.h"
 
 #ifndef TD_STACK_SIZE
 #define TD_STACK_SIZE 128 * 1024 // 128kb
@@ -15,15 +15,30 @@
 #define TD_RING_SIZE 32
 #endif
 
-typedef void (*fn)(td_rt*);
+typedef void (*fn)(td_rt *);
+
+char *td_status_to_str(td_coro_status status) {
+  switch (status) {
+  case TD_CORO_FREE:
+    return "TD_CORO_FREE";
+  case TD_CORO_RUNNING:
+    return "TD_CORO_RUNNING";
+  case TD_CORO_WAITING_ON_IO:
+    return "TD_CORO_WAITING_ON_IO";
+  case TD_CORO_FINISHED:
+    return "TD_CORO_FINISHED";
+  case TD_CORO_DEAD:
+    return "TD_CORO_DEAD";
+  }
+}
 
 void td_sch_loop(td_rt *rt) {
+  bool all_waiting;
   while (rt->running.len > 1) {
-    bool all_waiting = true;
     do {
       // Assume all coros are waiting on io
-
       all_waiting = true;
+
       // Loop through all coros and resume if its RUNNING
       for (int i = 1; i < rt->running.len; i++) {
         td_coro *coro = rt->running.items + i;
@@ -39,7 +54,7 @@ void td_sch_loop(td_rt *rt) {
       // Wait till all coros are waiting for io or there are no active coros.
     } while (!all_waiting);
 
-    for (int i = 1; i < rt->running.len; i++) {
+    if (rt->running.len > 1) {
       struct io_uring_cqe *cqe;
       io_uring_wait_cqe(&rt->sch->ring, &cqe);
 
@@ -75,21 +90,19 @@ void td_sch_init(td_rt *rt) {
   rt->sch = sch;
 }
 
-void *sch_id(td_rt *rt) {
-  return (void*)rt->current->id;
-}
+void *sch_id(td_rt *rt) { return (void *)rt->current->id; }
 
 void sch_wait_on_io(td_rt *rt, struct io_uring_cqe **cqe) {
   rt->current->status = TD_CORO_WAITING_ON_IO;
   td_suspend(rt);
-  *cqe =(struct io_uring_cqe*)rt->scratch;
+  *cqe = (struct io_uring_cqe *)rt->scratch;
   rt->current->status = TD_CORO_RUNNING;
 }
 
 void td_sleep(td_rt *rt, size_t millis) {
   assert(&rt->sch != NULL);
 
-  struct __kernel_timespec ts = { .tv_sec = 0, .tv_nsec = millis * 1000000 };
+  struct __kernel_timespec ts = {.tv_sec = 0, .tv_nsec = millis * 1000000};
   struct io_uring_sqe *sqe = io_uring_get_sqe(&rt->sch->ring);
   struct io_uring_cqe *cqe;
 
@@ -101,7 +114,6 @@ void td_sleep(td_rt *rt, size_t millis) {
 
   sch_wait_on_io(rt, &cqe);
 }
-
 
 ssize_t td_read(td_rt *rt, int fd, void *buf, size_t count) {
   assert(&rt->sch != NULL);

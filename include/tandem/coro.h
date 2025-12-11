@@ -1,7 +1,7 @@
 #ifndef TD_CORO_H
 #define TD_CORO_H
 
-#include "common.h"
+#include "../common.h"
 #include <stdlib.h>
 
 td_rt *td_init();

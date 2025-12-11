@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "tandem/coro.h"
+#include "../include/tandem/coro.h"
 
 #define STACK_SIZE 64 * 1024
 
