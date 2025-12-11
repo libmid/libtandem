@@ -29,6 +29,10 @@ examples: libtandem.a
 	examples/async.c -o build/examples/async \
 	-Ibuild/include/ -Lbuild -l:libtandem.a -luring -Wl,-rpath=build
 
+	cc $(CC_FLAGS) -Wall \
+	examples/echoserver.c -o build/examples/eschoserver \
+	-Ibuild/include/ -Lbuild -l:libtandem.a -luring -Wl,-rpath=build
+
 clean:
 	cd build && rm -f coro.o scheduler.o coro_vec.o x86_64.o
 
