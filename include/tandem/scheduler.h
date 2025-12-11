@@ -4,7 +4,8 @@
 #include "../common.h"
 
 void td_sch_init(td_rt *rt);
-void td_sch_loop(td_rt *rt);
+void td_sch_free(td_rt *rt);
+void td_sch_run(td_rt *rt);
 
 void td_sleep(td_rt *rt, size_t millis);
 int td_close(td_rt *rt, int fd);

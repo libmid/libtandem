@@ -9,14 +9,14 @@
 #define PORT 6968
 
 void handle_connection(td_rt *rt) {
-  int clientfd = *(int *)rt->current->argv;
+  int clientfd = *(int *)td_argv(rt);
   free(rt->current->argv);
   char buf[1024];
   while (true) {
     int size = td_read(rt, clientfd, &buf, sizeof(buf));
 
     if (size <= 0) {
-      printf("ERROR: Read from client\n");
+      printf("ERROR: Read from client / Connection closed\n");
       break;
     }
 
@@ -91,7 +91,7 @@ int main() {
 
   td_spawn(rt, &server, 0, NULL, STACK_SIZE);
 
-  td_sch_loop(rt);
+  td_sch_run(rt);
 
   td_free(rt);
   return 0;

@@ -34,7 +34,7 @@ int main() {
   td_spawn(rt, &input, 0, NULL, STACK_SIZE);
   td_spawn(rt, &counter_loop, 0, NULL, STACK_SIZE);
 
-  td_sch_loop(rt);
+  td_sch_run(rt);
 
   td_free(rt);
   return 0;
