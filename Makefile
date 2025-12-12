@@ -6,7 +6,7 @@ all: libtandem.so libtandem.a examples clean
 libtandem.a: libtandem.so
 	cd build && ar rc libtandem.a coro.o scheduler.o coro_vec.o x86_64.o
 
-libtandem.so: include/coro_vec.h include/tandem/coro.h src/coro.c src/scheduler.c src/coro_vec.c
+libtandem.so: include/tandem/coro_vec.h include/tandem/coro.h src/coro.c src/scheduler.c src/coro_vec.c
 	mkdir -p build/ build/include
 
 	cd build && cc -fPIC $(CC_FLAGS) -I../include -c ../src/coro.c -o coro.o
