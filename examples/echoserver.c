@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../include/tandem/coro.h"
-#include "../include/tandem/scheduler.h"
+#include <tandem/tandem.h>
 
 #define STACK_SIZE 32 * 1024
 #define PORT 6968

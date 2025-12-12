@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h> // memmove()
 
-#include "../include/common.h"
+#include <tandem/common.h>
 
 #define INITIAL_SIZE 4
 #define SCALING_FACTOR 2

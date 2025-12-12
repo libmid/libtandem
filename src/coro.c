@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../include/common.h"
-#include "../include/coro_vec.h"
+#include <tandem/coro_vec.h>
+#include <tandem/coro.h>
 
 void __td_switch(td_ctx *from, td_ctx *to);
 void __td_entry();
@@ -65,6 +65,7 @@ void td_resume(td_rt *rt, td_coro *coro) {
 void entry(td_rt *rt) {
   rt->current->fn(rt);
 
+  // TODO: Spawn returns a view into the runnign vec, after tasks ends the pointer is invalid
   td_coro coro = unordered_remove_vec(&rt->running,
                                       index_of_vec(&rt->running, rt->current));
 

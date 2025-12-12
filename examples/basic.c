@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../include/tandem/coro.h"
+#include <tandem/coro.h>
 
 #define STACK_SIZE 64 * 1024
 
@@ -26,6 +26,7 @@ int main() {
   while (coro1->status == TD_CORO_RUNNING || coro2->status == TD_CORO_RUNNING) {
     printf("MAIN\n");
     td_resume(rt, coro1);
+    printf("%d\n", coro2->status);
     td_resume(rt, coro2);
   }
 

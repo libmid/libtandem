@@ -5,8 +5,8 @@
 #include <sys/socket.h>
 #include <time.h>
 
-#include "../include/common.h"
-#include "../include/tandem/coro.h"
+#include <tandem/coro.h>
+#include <tandem/scheduler.h>
 
 #ifndef TD_STACK_SIZE
 #define TD_STACK_SIZE 128 * 1024 // 128kb

@@ -1,7 +1,7 @@
-#ifndef TD_ASYNC_H
-#define TD_ASYNC_H
+#ifndef TD_SCHEDULER_H
+#define TD_SCHEDULER_H
 
-#include "../common.h"
+#include "common.h"
 
 void td_sch_init(td_rt *rt);
 void td_sch_free(td_rt *rt);

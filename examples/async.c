@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-#include "../include/tandem/coro.h"
-#include "../include/tandem/scheduler.h"
+#include <tandem/tandem.h>
 
 #define MSEC 2000
 #define STACK_SIZE 32 * 1024
