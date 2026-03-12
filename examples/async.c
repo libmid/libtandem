@@ -2,7 +2,7 @@
 
 #include <tandem/tandem.h>
 
-#define MSEC 2000
+#define MSEC 100
 #define STACK_SIZE 32 * 1024
 
 int flag = 0;
@@ -22,7 +22,7 @@ void counter_loop(td_rt *rt) {
   int c = 1;
   while (!flag) {
     printf("[COUNTER] counter = %d\n", c++);
-    td_sleep(rt, 1500);
+    td_sleep(rt, MSEC);
   }
 }
 

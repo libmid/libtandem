@@ -1,0 +1,56 @@
+#ifndef CORO_VEC_H
+#define CORO_VEC_H
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h> // memmove()
+
+#include <tandem/common.h>
+
+void __td_free_list(__td_coro_list *list) {
+  while (list->next) {
+  }
+}
+
+void push_vec(coro_vec *vec, td_coro coro) {
+  if (vec->capacity == vec->len) {
+    vec->items = realloc(vec->items, vec->capacity * SCALING_FACTOR);
+    vec->capacity = vec->capacity * SCALING_FACTOR;
+  }
+  *(vec->items + vec->len) = coro;
+  vec->len++;
+}
+
+td_coro *peek_vec(coro_vec *vec) { return vec->items + (vec->len - 1); }
+
+td_coro pop_vec(coro_vec *vec) {
+  td_coro coro = *(vec->items + --vec->len);
+  return coro;
+}
+
+size_t index_of_vec(coro_vec *vec, td_coro *coro) {
+  for (int i = 0; i < vec->len; i++) {
+    if ((vec->items + i) == coro) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+td_coro ordered_remove_vec(coro_vec *vec, size_t index) {
+  assert(vec->len > index);
+  td_coro coro = *(vec->items + index);
+  memmove(vec->items + index, vec->items + index + 1,
+          --vec->len - index * sizeof(td_coro));
+  return coro;
+}
+
+td_coro unordered_remove_vec(coro_vec *vec, size_t index) {
+  assert(vec->len > index);
+  td_coro coro = *(vec->items + index);
+  *(vec->items + index) = *(vec->items + --vec->len);
+  return coro;
+}
+
+#endif
