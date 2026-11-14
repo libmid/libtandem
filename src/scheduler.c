@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <liburing.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include <tandem/common.h>
