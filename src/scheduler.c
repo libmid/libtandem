@@ -60,13 +60,18 @@ void td_sch_run(td_rt *rt) {
     } while (!all_waiting && rt->running.head && rt->running.head->next);
 
     if (rt->running.head && rt->running.head->next) {
-      struct io_uring_cqe *cqe;
+      struct io_uring_cqe *cqes[TD_RING_SIZE];
       io_uring_submit_and_wait(&rt->sch->ring, 1);
-      io_uring_wait_cqe(&rt->sch->ring, &cqe);
-      td_coro *coro = (td_coro *)io_uring_cqe_get_data(cqe);
-      coro->io_res = cqe->res;
-      io_uring_cqe_seen(&rt->sch->ring, cqe);
-      td_resume(rt, coro);
+      unsigned count = io_uring_peek_batch_cqe(&rt->sch->ring, cqes, TD_RING_SIZE);
+      td_coro *ready[TD_RING_SIZE];
+      for (unsigned i = 0; i < count; i++) {
+        ready[i] = (td_coro *)io_uring_cqe_get_data(cqes[i]);
+        ready[i]->io_res = cqes[i]->res;
+      }
+      io_uring_cq_advance(&rt->sch->ring, count);
+      for (unsigned i = 0; i < count; i++) {
+        td_resume(rt, ready[i]);
+      }
     }
   }
 }
