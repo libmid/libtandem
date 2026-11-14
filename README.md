@@ -1,6 +1,6 @@
 > *Tandem* - Two people or pieces of equipment that work together to achieve a result
 
-Libtandem is a stack based (no callback) coroutine library for c using register context switching and `io_uring`. Naturally only linux kernel >= 5.1 is supported. The code is self documenting and public api is marked with TD_API so checkout `include/` for docs.
+Libtandem is a stack based (no callback) coroutine library for c using context switching and `io_uring`. Naturally, only linux kernel >= 5.1 is supported. The code is self documenting and public api is marked with TD_API so checkout `include/` for docs.
 
 ## Build & Usage
 
@@ -93,4 +93,15 @@ int main() {
   td_free(rt);
   return 0;
 }
+```
+## Benchmarks
+
+Here's some benchmark results on my ryzen 7 8840HS.
+
+```
+Total iterations: 10000000
+Total switches:   20000000
+Total time:       0.257 s
+Time per switch:  12.87 ns
+Switches / sec:   77.68 M/s
 ```
