@@ -4,16 +4,17 @@ VERSION = 0.1.0
 all: libtandem.so libtandem.a examples clean
 
 libtandem.a: libtandem.so
-	cd build && ar rc libtandem.a coro.o scheduler.o queue.o x86_64.o
+	cd build && ar rc libtandem.a coro.o scheduler.o queue.o io.o x86_64.o
 
-libtandem.so: include/tandem/queue.h include/tandem/coro.h src/coro.c src/scheduler.c src/queue.c
+libtandem.so: include/tandem/queue.h include/tandem/coro.h include/tandem/io.h src/coro.c src/scheduler.c src/queue.c src/io.c
 	mkdir -p build/ build/include
 
 	cd build && cc -fPIC $(CC_FLAGS) -I../include -c ../src/coro.c -o coro.o
 	cd build && cc -fPIC $(CC_FLAGS) -I../include -c ../src/scheduler.c -o scheduler.o
 	cd build && cc -fPIC $(CC_FLAGS) -I../include -c ../src/queue.c -o queue.o
+	cd build && cc -fPIC $(CC_FLAGS) -I../include -c ../src/io.c -o io.o
 	cc $(CC_FLAGS) -c src/arch/x86_64.s -o build/x86_64.o
-	cd build && cc $(CC_FLAGS) -shared -luring coro.o scheduler.o queue.o x86_64.o -o libtandem.so
+	cd build && cc $(CC_FLAGS) -shared -luring coro.o scheduler.o queue.o io.o x86_64.o -o libtandem.so
 
 	cp -r include/ build/
 
@@ -29,11 +30,11 @@ examples: libtandem.a
 	-Ibuild/include/ -Lbuild -l:libtandem.a -luring -Wl,-rpath=build
 
 	cc $(CC_FLAGS) -Wall \
-	examples/echoserver.c -o build/examples/eschoserver \
+	examples/echoserver.c -o build/examples/echoserver \
 	-Ibuild/include/ -Lbuild -l:libtandem.a -luring -Wl,-rpath=build
 
 clean:
-	cd build && rm -f coro.o scheduler.o queue.o x86_64.o
+	cd build && rm -f coro.o scheduler.o queue.o io.o x86_64.o
 
 cleanall:
 	rm -rf build/

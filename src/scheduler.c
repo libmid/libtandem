@@ -1,10 +1,7 @@
 #include <assert.h>
-#include <errno.h>
 #include <liburing.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <time.h>
 
 #include <tandem/common.h>
 #include <tandem/coro.h>
@@ -31,7 +28,7 @@ char *td_status_to_str(td_coro_status status) {
   return "TD_CORO_UNKNOWN";
 }
 
-static struct io_uring_sqe *get_sqe(td_rt *rt) {
+struct io_uring_sqe *td_sch_get_sqe(td_rt *rt) {
   assert(rt->sch != NULL);
   struct io_uring_sqe *sqe = io_uring_get_sqe(&rt->sch->ring);
   if (!sqe) {
@@ -40,6 +37,12 @@ static struct io_uring_sqe *get_sqe(td_rt *rt) {
     assert(sqe != NULL);
   }
   return sqe;
+}
+
+void td_sch_wait(td_rt *rt) {
+  rt->current->status = TD_CORO_WAITING_ON_IO;
+  td_suspend(rt);
+  rt->current->status = TD_CORO_RUNNING;
 }
 
 void td_sch_run(td_rt *rt) {
@@ -93,112 +96,4 @@ void td_sch_free(td_rt *rt) {
     free(rt->sch);
     rt->sch = NULL;
   }
-}
-
-static ssize_t io_res(td_rt *rt) {
-  if (rt->current->io_res < 0) {
-    errno = -rt->current->io_res;
-    return -1;
-  }
-  return rt->current->io_res;
-}
-
-void sch_wait_on_io(td_rt *rt) {
-  rt->current->status = TD_CORO_WAITING_ON_IO;
-  td_suspend(rt);
-  rt->current->status = TD_CORO_RUNNING;
-}
-
-void td_sleep(td_rt *rt, size_t millis) {
-  struct __kernel_timespec ts = {
-    .tv_sec = millis / 1000,
-    .tv_nsec = (millis % 1000) * 1000000ULL
-  };
-  struct io_uring_sqe *sqe = get_sqe(rt);
-
-  io_uring_prep_timeout(sqe, &ts, 0, 0);
-  io_uring_sqe_set_data(sqe, rt->current);
-
-  sch_wait_on_io(rt);
-  if (rt->current->io_res < 0) {
-    errno = -rt->current->io_res;
-  }
-}
-
-ssize_t td_read(td_rt *rt, int fd, void *buf, size_t count) {
-  struct io_uring_sqe *sqe = get_sqe(rt);
-
-  io_uring_prep_read(sqe, fd, buf, count, 0);
-  io_uring_sqe_set_data(sqe, rt->current);
-
-  sch_wait_on_io(rt);
-
-  return io_res(rt);
-}
-
-ssize_t td_write(td_rt *rt, int fd, void *buf, size_t count) {
-  struct io_uring_sqe *sqe = get_sqe(rt);
-
-  io_uring_prep_write(sqe, fd, buf, count, 0);
-  io_uring_sqe_set_data(sqe, rt->current);
-
-  sch_wait_on_io(rt);
-
-  return io_res(rt);
-}
-
-int td_socket(td_rt *rt, int domain, int type, int protocol) {
-  struct io_uring_sqe *sqe = get_sqe(rt);
-
-  io_uring_prep_socket(sqe, domain, type, protocol, 0);
-  io_uring_sqe_set_data(sqe, rt->current);
-
-  sch_wait_on_io(rt);
-
-  return io_res(rt);
-}
-
-int td_bind(td_rt *rt, int sockfd, struct sockaddr *addr, socklen_t addrlen) {
-  struct io_uring_sqe *sqe = get_sqe(rt);
-
-  io_uring_prep_bind(sqe, sockfd, addr, addrlen);
-  io_uring_sqe_set_data(sqe, rt->current);
-
-  sch_wait_on_io(rt);
-
-  return io_res(rt);
-}
-
-int td_listen(td_rt *rt, int sockfd, int backlog) {
-  struct io_uring_sqe *sqe = get_sqe(rt);
-
-  io_uring_prep_listen(sqe, sockfd, backlog);
-  io_uring_sqe_set_data(sqe, rt->current);
-
-  sch_wait_on_io(rt);
-
-  return io_res(rt);
-}
-
-int td_accept(td_rt *rt, int sockfd, struct sockaddr *addr,
-              socklen_t *addrlen) {
-  struct io_uring_sqe *sqe = get_sqe(rt);
-
-  io_uring_prep_accept(sqe, sockfd, addr, addrlen, 0);
-  io_uring_sqe_set_data(sqe, rt->current);
-
-  sch_wait_on_io(rt);
-
-  return io_res(rt);
-}
-
-int td_close(td_rt *rt, int fd) {
-  struct io_uring_sqe *sqe = get_sqe(rt);
-
-  io_uring_prep_close(sqe, fd);
-  io_uring_sqe_set_data(sqe, rt->current);
-
-  sch_wait_on_io(rt);
-
-  return io_res(rt);
 }

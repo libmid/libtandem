@@ -2,18 +2,13 @@
 #define TD_SCHEDULER_H
 
 #include "common.h"
+#include "io.h"
 
 void td_sch_init(td_rt *rt);
 void td_sch_free(td_rt *rt);
 void td_sch_run(td_rt *rt);
 
-void td_sleep(td_rt *rt, size_t millis);
-int td_close(td_rt *rt, int fd);
-ssize_t td_read(td_rt *rt, int fd, void *buf, size_t count);
-ssize_t td_write(td_rt *rt, int fd, void *buf, size_t count);
-int td_socket(td_rt *rt, int domain, int type, int protocol);
-int td_bind(td_rt *rt, int sockfd, struct sockaddr *addr, socklen_t addrlen);
-int td_listen(td_rt *rt, int sockfd, int backlog);
-int td_accept(td_rt *rt, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+struct io_uring_sqe *td_sch_get_sqe(td_rt *rt);
+void td_sch_wait(td_rt *rt);
 
 #endif
