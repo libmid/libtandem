@@ -33,6 +33,14 @@ examples: libtandem.a
 	examples/echoserver.c -o build/examples/echoserver \
 	-Ibuild/include/ -Lbuild -l:libtandem.a -luring -Wl,-rpath=build
 
+bench: libtandem.a
+	mkdir -p build/benchmarks
+
+	cc $(CC_FLAGS) -O3 benchmarks/bench_switch.c -o build/benchmarks/bench_switch \
+	-Ibuild/include/ -Lbuild -l:libtandem.a -luring -Wl,-rpath=build
+
+	./build/benchmarks/bench_switch
+
 clean:
 	cd build && rm -f coro.o scheduler.o queue.o io.o x86_64.o
 
