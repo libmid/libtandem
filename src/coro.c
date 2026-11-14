@@ -70,7 +70,7 @@ void td_resume(td_rt *rt, td_coro *coro) {
   rt->current = current;
 }
 
-void entry(td_rt *rt) {
+static void entry(td_rt *rt) {
   td_coro *coro = rt->current;
   coro->fn(rt);
 

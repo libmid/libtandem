@@ -1,12 +1,14 @@
 .text
 
 .global __td_entry
+.hidden __td_entry
 __td_entry:
     movq %r12, %rdi
     call *%r13
     ud2
 
 .global __td_switch
+.hidden __td_switch
 __td_switch:
     movq %rsp, 8(%rdi)
     movq %rbp, 16(%rdi)

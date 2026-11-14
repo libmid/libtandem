@@ -1,6 +1,12 @@
 #ifndef TD_COMMON_H
 #define TD_COMMON_H
 
+#if defined(__GNUC__) && __GNUC__ >= 4
+  #define TD_API __attribute__((visibility("default")))
+#else
+  #define TD_API
+#endif
+
 #include <liburing.h>
 #include <stdbool.h>
 #include <stdlib.h>

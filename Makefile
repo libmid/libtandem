@@ -1,4 +1,4 @@
-CC_FLAGS = -ggdb
+CC_FLAGS = -ggdb -fvisibility=hidden
 VERSION = 0.1.0
 
 all: libtandem.so libtandem.a examples clean
