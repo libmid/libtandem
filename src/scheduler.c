@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <errno.h>
 #include <liburing.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,6 +95,14 @@ void td_sch_free(td_rt *rt) {
   }
 }
 
+static ssize_t io_res(td_rt *rt) {
+  if (rt->current->io_res < 0) {
+    errno = -rt->current->io_res;
+    return -1;
+  }
+  return rt->current->io_res;
+}
+
 void sch_wait_on_io(td_rt *rt) {
   rt->current->status = TD_CORO_WAITING_ON_IO;
   td_suspend(rt);
@@ -111,6 +120,9 @@ void td_sleep(td_rt *rt, size_t millis) {
   io_uring_sqe_set_data(sqe, rt->current);
 
   sch_wait_on_io(rt);
+  if (rt->current->io_res < 0) {
+    errno = -rt->current->io_res;
+  }
 }
 
 ssize_t td_read(td_rt *rt, int fd, void *buf, size_t count) {
@@ -121,7 +133,7 @@ ssize_t td_read(td_rt *rt, int fd, void *buf, size_t count) {
 
   sch_wait_on_io(rt);
 
-  return rt->current->io_res;
+  return io_res(rt);
 }
 
 ssize_t td_write(td_rt *rt, int fd, void *buf, size_t count) {
@@ -132,7 +144,7 @@ ssize_t td_write(td_rt *rt, int fd, void *buf, size_t count) {
 
   sch_wait_on_io(rt);
 
-  return rt->current->io_res;
+  return io_res(rt);
 }
 
 int td_socket(td_rt *rt, int domain, int type, int protocol) {
@@ -143,7 +155,7 @@ int td_socket(td_rt *rt, int domain, int type, int protocol) {
 
   sch_wait_on_io(rt);
 
-  return rt->current->io_res;
+  return io_res(rt);
 }
 
 int td_bind(td_rt *rt, int sockfd, struct sockaddr *addr, socklen_t addrlen) {
@@ -154,7 +166,7 @@ int td_bind(td_rt *rt, int sockfd, struct sockaddr *addr, socklen_t addrlen) {
 
   sch_wait_on_io(rt);
 
-  return rt->current->io_res;
+  return io_res(rt);
 }
 
 int td_listen(td_rt *rt, int sockfd, int backlog) {
@@ -165,7 +177,7 @@ int td_listen(td_rt *rt, int sockfd, int backlog) {
 
   sch_wait_on_io(rt);
 
-  return rt->current->io_res;
+  return io_res(rt);
 }
 
 int td_accept(td_rt *rt, int sockfd, struct sockaddr *addr,
@@ -177,7 +189,7 @@ int td_accept(td_rt *rt, int sockfd, struct sockaddr *addr,
 
   sch_wait_on_io(rt);
 
-  return rt->current->io_res;
+  return io_res(rt);
 }
 
 int td_close(td_rt *rt, int fd) {
@@ -188,5 +200,5 @@ int td_close(td_rt *rt, int fd) {
 
   sch_wait_on_io(rt);
 
-  return rt->current->io_res;
+  return io_res(rt);
 }
