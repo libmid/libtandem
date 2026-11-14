@@ -2,49 +2,60 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <tandem/coro_vec.h>
+#include <tandem/common.h>
 #include <tandem/coro.h>
+#include <tandem/queue.h>
 
 void __td_switch(td_ctx *from, td_ctx *to);
 void __td_entry();
+void td_sch_free(td_rt *rt);
 
 td_rt *td_init() {
   td_rt *rt = calloc(1, sizeof(td_rt));
-  init_vec(&rt->free);
-  init_vec(&rt->running);
-  init_vec(&rt->finished);
-  init_vec(&rt->dead);
 
-  td_coro coro = {0};
-  coro.status = TD_CORO_RUNNING;
-  coro.id = 0;
+  rt->main_coro = calloc(1, sizeof(td_coro));
+  rt->main_coro->status = TD_CORO_RUNNING;
+  rt->main_coro->id = 0;
 
-  __td_switch(&coro.ctx, &coro.ctx);
-
-  push_vec(&rt->running, coro);
-
-  rt->current = rt->running.items;
+  td_queue_push(&rt->running, rt->main_coro);
+  rt->current = rt->main_coro;
 
   return rt;
 }
 
 void td_free(td_rt *rt) {
-  free_vec(&rt->free);
-  free_vec(&rt->running);
-  free_vec(&rt->finished);
-  free_vec(&rt->dead);
+  td_coro *c;
+  while ((c = td_queue_pop(&rt->running))) {
+    if (c != rt->main_coro) {
+      free(c->stack);
+    }
+    free(c);
+  }
+  while ((c = td_queue_pop(&rt->finished))) {
+    if (c != rt->main_coro) {
+      free(c->stack);
+    }
+    free(c);
+  }
+  while ((c = td_queue_pop(&rt->free))) {
+    free(c->stack);
+    free(c);
+  }
+  while ((c = td_queue_pop(&rt->dead))) {
+    free(c->stack);
+    free(c);
+  }
   if (rt->sch != NULL) {
-    free(rt->sch);
+    td_sch_free(rt);
   }
   free(rt);
 }
 
 void td_suspend(td_rt *rt) {
   if (rt->current == NULL) {
-    __td_switch(&rt->finished.items[rt->finished.len - 1].ctx,
-                &rt->running.items->ctx);
+    __td_switch(&rt->finished.tail->ctx, &rt->main_coro->ctx);
   } else {
-    __td_switch(&rt->current->ctx, &rt->running.items->ctx);
+    __td_switch(&rt->current->ctx, &rt->main_coro->ctx);
   }
 }
 
@@ -53,27 +64,21 @@ void td_resume(td_rt *rt, td_coro *coro) {
     return;
 
   td_coro *current = rt->current;
-
-  // Set the current coro to the child coro and set its status to running
   coro->status = TD_CORO_RUNNING;
   rt->current = coro;
   __td_switch(&current->ctx, &coro->ctx);
-  // Reset the current coro
   rt->current = current;
 }
 
 void entry(td_rt *rt) {
-  rt->current->fn(rt);
+  td_coro *coro = rt->current;
+  coro->fn(rt);
 
-  // TODO: Spawn returns a view into the runnign vec, after tasks ends the pointer is invalid
-  td_coro coro = unordered_remove_vec(&rt->running,
-                                      index_of_vec(&rt->running, rt->current));
+  td_queue_remove(&rt->running, coro);
+  coro->status = TD_CORO_FINISHED;
+  td_queue_push(&rt->finished, coro);
 
-  rt->current = NULL; // The current task has ended
-
-  coro.status = TD_CORO_FINISHED;
-  push_vec(&rt->finished, coro);
-
+  rt->current = NULL;
   td_suspend(rt);
 }
 
@@ -85,38 +90,34 @@ void td_return(td_rt *rt, void *result) { rt->current->result = result; }
 
 void *td_consume(td_rt *rt, td_coro *coro) {
   coro->status = TD_CORO_DEAD;
-  td_coro c =
-      unordered_remove_vec(&rt->finished, index_of_vec(&rt->finished, coro));
-  push_vec(&rt->dead, c);
+  td_queue_remove(&rt->finished, coro);
+  td_queue_push(&rt->dead, coro);
   return coro->result;
 }
 
 td_coro *td_spawn(td_rt *rt, void (*fn)(td_rt *), size_t argc, void *argv,
                   size_t stack_size) {
-  td_coro coro = {0};
-  coro.id = ++rt->id_counter;
-  coro.argc = argc;
-  coro.argv = argv;
-
-  if (rt->free.len > 0) {
-    coro = pop_vec(&rt->free);
-    if (stack_size > coro.stack_size) {
-      coro.stack = realloc(coro.stack, stack_size);
-      coro.stack_size = stack_size;
-    }
-  } else {
-    coro.stack = malloc(stack_size);
-    coro.stack_size = stack_size;
+  td_coro *coro = td_queue_pop(&rt->free);
+  if (!coro) {
+    coro = calloc(1, sizeof(td_coro));
+    coro->stack = malloc(stack_size);
+    coro->stack_size = stack_size;
+  } else if (stack_size > coro->stack_size) {
+    coro->stack = realloc(coro->stack, stack_size);
+    coro->stack_size = stack_size;
   }
 
-  coro.status = TD_CORO_RUNNING;
-  coro.fn = fn;
-  coro.ctx.rip = (void *)__td_entry;
-  coro.ctx.rsp = (void *)(coro.stack + stack_size);
-  coro.ctx.r12 = (void *)rt;
-  coro.ctx.r13 = (void *)entry;
+  coro->id = ++rt->id_counter;
+  coro->argc = argc;
+  coro->argv = argv;
+  coro->status = TD_CORO_RUNNING;
+  coro->fn = fn;
+  coro->result = NULL;
+  coro->ctx.rip = (void *)__td_entry;
+  coro->ctx.rsp = (void *)(coro->stack + stack_size);
+  coro->ctx.r12 = (void *)rt;
+  coro->ctx.r13 = (void *)entry;
 
-  push_vec(&rt->running, coro);
-
-  return peek_vec(&rt->running);
+  td_queue_push(&rt->running, coro);
+  return coro;
 }
