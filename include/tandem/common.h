@@ -2,7 +2,10 @@
 #define TD_COMMON_H
 
 #include <liburing.h>
+#include <stdbool.h>
 #include <stdlib.h>
+
+#include "queue.h"
 
 typedef enum td_coro_status {
   TD_CORO_FREE,
@@ -16,25 +19,19 @@ typedef struct td_ctx {
   void *rip, *rsp, *rbp, *rbx, *r12, *r13, *r14, *r15;
 } td_ctx;
 
-typedef struct coro_vec {
-  struct td_coro *items;
-  size_t len;
-  size_t capacity;
-} coro_vec;
-
 typedef struct td_sch {
   struct io_uring ring;
 } td_sch;
 
 typedef struct td_rt {
   size_t id_counter;
-  coro_vec free;
-  coro_vec running;
-  coro_vec finished;
-  coro_vec dead;
-  void *scratch;
+  td_queue free;
+  td_queue running;
+  td_queue finished;
+  td_queue dead;
   struct td_sch *sch;
   struct td_coro *current;
+  struct td_coro *main_coro;
 } td_rt;
 
 typedef struct td_coro {
@@ -48,12 +45,10 @@ typedef struct td_coro {
   size_t argc;
   void *argv;
   void *result;
+  int io_res;
 
-} td_coro;
-
-typedef struct __td_coro_list {
+  struct td_coro *prev;
   struct td_coro *next;
-  struct td_coro coro;
-} __td_coro_list;
+} td_coro;
 
 #endif
