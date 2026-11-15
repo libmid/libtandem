@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/uio.h>
 #include <time.h>
 
 #include "common.h"
@@ -17,6 +18,10 @@ TD_API ssize_t td_read(td_rt *rt, int fd, void *buf, size_t count);
 TD_API ssize_t td_write(td_rt *rt, int fd, const void *buf, size_t count);
 TD_API ssize_t td_pread(td_rt *rt, int fd, void *buf, size_t count, off_t offset);
 TD_API ssize_t td_pwrite(td_rt *rt, int fd, const void *buf, size_t count, off_t offset);
+TD_API ssize_t td_readv(td_rt *rt, int fd, const struct iovec *iov, int iovcnt);
+TD_API ssize_t td_writev(td_rt *rt, int fd, const struct iovec *iov, int iovcnt);
+TD_API ssize_t td_preadv(td_rt *rt, int fd, const struct iovec *iov, int iovcnt, off_t offset);
+TD_API ssize_t td_pwritev(td_rt *rt, int fd, const struct iovec *iov, int iovcnt, off_t offset);
 TD_API int td_openat(td_rt *rt, int dfd, const char *path, int flags, mode_t mode);
 TD_API int td_fsync(td_rt *rt, int fd, unsigned int flags);
 
@@ -27,6 +32,8 @@ TD_API int td_accept(td_rt *rt, int sockfd, struct sockaddr *addr, socklen_t *ad
 TD_API int td_connect(td_rt *rt, int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 TD_API ssize_t td_recv(td_rt *rt, int sockfd, void *buf, size_t len, int flags);
 TD_API ssize_t td_send(td_rt *rt, int sockfd, const void *buf, size_t len, int flags);
+TD_API ssize_t td_recvmsg(td_rt *rt, int sockfd, struct msghdr *msg, unsigned int flags);
+TD_API ssize_t td_sendmsg(td_rt *rt, int sockfd, const struct msghdr *msg, unsigned int flags);
 TD_API int td_shutdown(td_rt *rt, int sockfd, int how);
 
 TD_API int td_poll(td_rt *rt, int fd, unsigned int mask);

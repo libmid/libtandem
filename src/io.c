@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <liburing.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <time.h>
 
 #include <tandem/common.h>
@@ -80,6 +81,50 @@ ssize_t td_pwrite(td_rt *rt, int fd, const void *buf, size_t count, off_t offset
   struct io_uring_sqe *sqe = td_sch_get_sqe(rt);
 
   io_uring_prep_write(sqe, fd, buf, count, offset);
+  io_uring_sqe_set_data(sqe, rt->current);
+
+  td_sch_wait(rt);
+
+  return io_res(rt);
+}
+
+ssize_t td_readv(td_rt *rt, int fd, const struct iovec *iov, int iovcnt) {
+  struct io_uring_sqe *sqe = td_sch_get_sqe(rt);
+
+  io_uring_prep_readv(sqe, fd, iov, iovcnt, -1);
+  io_uring_sqe_set_data(sqe, rt->current);
+
+  td_sch_wait(rt);
+
+  return io_res(rt);
+}
+
+ssize_t td_writev(td_rt *rt, int fd, const struct iovec *iov, int iovcnt) {
+  struct io_uring_sqe *sqe = td_sch_get_sqe(rt);
+
+  io_uring_prep_writev(sqe, fd, iov, iovcnt, -1);
+  io_uring_sqe_set_data(sqe, rt->current);
+
+  td_sch_wait(rt);
+
+  return io_res(rt);
+}
+
+ssize_t td_preadv(td_rt *rt, int fd, const struct iovec *iov, int iovcnt, off_t offset) {
+  struct io_uring_sqe *sqe = td_sch_get_sqe(rt);
+
+  io_uring_prep_readv(sqe, fd, iov, iovcnt, offset);
+  io_uring_sqe_set_data(sqe, rt->current);
+
+  td_sch_wait(rt);
+
+  return io_res(rt);
+}
+
+ssize_t td_pwritev(td_rt *rt, int fd, const struct iovec *iov, int iovcnt, off_t offset) {
+  struct io_uring_sqe *sqe = td_sch_get_sqe(rt);
+
+  io_uring_prep_writev(sqe, fd, iov, iovcnt, offset);
   io_uring_sqe_set_data(sqe, rt->current);
 
   td_sch_wait(rt);
@@ -179,6 +224,28 @@ ssize_t td_send(td_rt *rt, int sockfd, const void *buf, size_t len, int flags) {
   struct io_uring_sqe *sqe = td_sch_get_sqe(rt);
 
   io_uring_prep_send(sqe, sockfd, buf, len, flags);
+  io_uring_sqe_set_data(sqe, rt->current);
+
+  td_sch_wait(rt);
+
+  return io_res(rt);
+}
+
+ssize_t td_recvmsg(td_rt *rt, int sockfd, struct msghdr *msg, unsigned int flags) {
+  struct io_uring_sqe *sqe = td_sch_get_sqe(rt);
+
+  io_uring_prep_recvmsg(sqe, sockfd, msg, flags);
+  io_uring_sqe_set_data(sqe, rt->current);
+
+  td_sch_wait(rt);
+
+  return io_res(rt);
+}
+
+ssize_t td_sendmsg(td_rt *rt, int sockfd, const struct msghdr *msg, unsigned int flags) {
+  struct io_uring_sqe *sqe = td_sch_get_sqe(rt);
+
+  io_uring_prep_sendmsg(sqe, sockfd, msg, flags);
   io_uring_sqe_set_data(sqe, rt->current);
 
   td_sch_wait(rt);
