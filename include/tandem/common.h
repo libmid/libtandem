@@ -44,6 +44,9 @@ typedef struct td_ctx {
 
 typedef struct td_sch {
   struct io_uring ring;
+  unsigned int ring_size;
+  struct io_uring_cqe **cqes;
+  struct td_coro **ready;
 } td_sch;
 
 typedef struct td_rt {

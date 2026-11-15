@@ -7,10 +7,6 @@
 #include <tandem/queue.h>
 #include <tandem/scheduler.h>
 
-#ifndef TD_RING_SIZE
-#define TD_RING_SIZE 32
-#endif
-
 char *td_status_to_str(td_coro_status status) {
   switch (status) {
   case TD_CORO_FREE:
@@ -63,35 +59,45 @@ void td_sch_run(td_rt *rt) {
     } while (!all_waiting && rt->running.head && rt->running.head->next);
 
     if (rt->running.head && rt->running.head->next) {
-      struct io_uring_cqe *cqes[TD_RING_SIZE];
       io_uring_submit_and_wait(&rt->sch->ring, 1);
-      unsigned count = io_uring_peek_batch_cqe(&rt->sch->ring, cqes, TD_RING_SIZE);
-      td_coro *ready[TD_RING_SIZE];
+      unsigned count = io_uring_peek_batch_cqe(&rt->sch->ring, rt->sch->cqes, rt->sch->ring_size);
       for (unsigned i = 0; i < count; i++) {
-        ready[i] = (td_coro *)io_uring_cqe_get_data(cqes[i]);
-        ready[i]->io_res = cqes[i]->res;
+        rt->sch->ready[i] = (td_coro *)io_uring_cqe_get_data(rt->sch->cqes[i]);
+        rt->sch->ready[i]->io_res = rt->sch->cqes[i]->res;
       }
       io_uring_cq_advance(&rt->sch->ring, count);
       for (unsigned i = 0; i < count; i++) {
-        td_resume(rt, ready[i]);
+        td_resume(rt, rt->sch->ready[i]);
       }
     }
   }
 }
 
-void td_sch_init(td_rt *rt) {
+void td_sch_init_opts(td_rt *rt, unsigned int ring_size, unsigned int flags) {
+  if (ring_size == 0) {
+    ring_size = TD_DEFAULT_RING_SIZE;
+  }
   td_sch *sch = malloc(sizeof(td_sch));
   struct io_uring ring;
 
-  io_uring_queue_init(TD_RING_SIZE, &ring, 0);
+  io_uring_queue_init(ring_size, &ring, flags);
 
   sch->ring = ring;
+  sch->ring_size = ring_size;
+  sch->cqes = malloc(ring_size * sizeof(struct io_uring_cqe *));
+  sch->ready = malloc(ring_size * sizeof(td_coro *));
   rt->sch = sch;
+}
+
+void td_sch_init(td_rt *rt) {
+  td_sch_init_opts(rt, TD_DEFAULT_RING_SIZE, 0);
 }
 
 void td_sch_free(td_rt *rt) {
   if (rt->sch) {
     io_uring_queue_exit(&rt->sch->ring);
+    free(rt->sch->cqes);
+    free(rt->sch->ready);
     free(rt->sch);
     rt->sch = NULL;
   }
