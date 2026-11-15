@@ -1,4 +1,4 @@
-CC_FLAGS = -ggdb -fvisibility=hidden
+CC_FLAGS = -ggdb -fvisibility=hidden -D_GNU_SOURCE
 VERSION = 0.1.0
 
 ARCH ?= $(shell uname -m)
