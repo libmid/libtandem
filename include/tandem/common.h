@@ -21,9 +21,26 @@ typedef enum td_coro_status {
   TD_CORO_DEAD,
 } td_coro_status;
 
+#if defined(__x86_64__)
 typedef struct td_ctx {
   void *rip, *rsp, *rbp, *rbx, *r12, *r13, *r14, *r15;
 } td_ctx;
+#elif defined(__aarch64__)
+typedef struct td_ctx {
+  void *sp;
+  void *x19, *x20, *x21, *x22, *x23, *x24, *x25, *x26, *x27, *x28;
+  void *fp, *lr;
+  void *d8, *d9, *d10, *d11, *d12, *d13, *d14, *d15;
+} td_ctx;
+#elif defined(__arm__)
+typedef struct td_ctx {
+  void *sp;
+  void *r4, *r5, *r6, *r7, *r8, *r9, *r10, *r11, *lr;
+  void *d8, *d9, *d10, *d11, *d12, *d13, *d14, *d15;
+} td_ctx;
+#else
+#error "Unsupported architecture"
+#endif
 
 typedef struct td_sch {
   struct io_uring ring;

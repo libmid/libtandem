@@ -26,7 +26,6 @@ int main() {
   while (coro1->status == TD_CORO_RUNNING || coro2->status == TD_CORO_RUNNING) {
     printf("MAIN\n");
     td_resume(rt, coro1);
-    printf("%d\n", coro2->status);
     td_resume(rt, coro2);
   }
 

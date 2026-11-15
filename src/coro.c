@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -113,10 +114,22 @@ td_coro *td_spawn(td_rt *rt, void (*fn)(td_rt *), size_t argc, void *argv,
   coro->status = TD_CORO_RUNNING;
   coro->fn = fn;
   coro->result = NULL;
+#if defined(__x86_64__)
   coro->ctx.rip = (void *)__td_entry;
   coro->ctx.rsp = (void *)(coro->stack + stack_size);
   coro->ctx.r12 = (void *)rt;
   coro->ctx.r13 = (void *)entry;
+#elif defined(__aarch64__)
+  coro->ctx.sp = (void *)((uintptr_t)(coro->stack + stack_size) & ~15UL);
+  coro->ctx.lr = (void *)__td_entry;
+  coro->ctx.x19 = (void *)rt;
+  coro->ctx.x20 = (void *)entry;
+#elif defined(__arm__)
+  coro->ctx.sp = (void *)((uintptr_t)(coro->stack + stack_size) & ~7UL);
+  coro->ctx.lr = (void *)__td_entry;
+  coro->ctx.r4 = (void *)rt;
+  coro->ctx.r5 = (void *)entry;
+#endif
 
   td_queue_push(&rt->running, coro);
   return coro;
